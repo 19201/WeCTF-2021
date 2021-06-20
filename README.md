@@ -51,3 +51,5 @@ for offset in range(1, 64): # 64 is the size of the flag - based from manual tes
     guess_letter_range(offset)
     print("".join(FLAG))
 ```
+
+FLAG: we{e0df7105-edcd-4dc6-8349-f3bef83643a9@h0P3_u_didnt_u3e_sq1m4P}
